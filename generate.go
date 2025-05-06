@@ -117,5 +117,5 @@ func (r *Reportify) Generate() error {
 	}
 
 	// Output the PDF
-	return pdf.OutputFileAndClose(r.outputFile)
+	return pdf.OutputFileAndClose(r.outputFile + ".pdf")
 }

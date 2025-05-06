@@ -13,7 +13,7 @@ import (
 func main() {
 
 	// For testing purposes, out a file in the current directory
-	outputFile := "example-report.pdf"
+	outputFile := "example-report"
 
 	// Create a header table for the report
 	meta := [][]string{
