@@ -22,6 +22,22 @@ func main() {
 		{"Subject", "This report was generated to demonstrate using the reportify package."},
 	}
 
+	// Add a long paragraph to test table page wrapping
+	// This will require multiple pages
+	var tmp string
+	for i := 0; i < 100; i++ {
+		tmp += "This is a long paragraph to demonstrate table wrapping.\n"
+	}
+	meta = append(meta, []string{"Long Paragraph", tmp})
+
+	// Add a long paragraph to demonstrate table wrapping
+	// This will wrap to a second page
+	tmp = ""
+	for i := 0; i < 40; i++ {
+		tmp += "This is a second long paragraph to demonstrate table wrapping.\n"
+	}
+	meta = append(meta, []string{"Second Long Paragraph", tmp})
+
 	// Start the report
 	report := reportify.New(
 		reportify.WithOutputFile(outputFile),

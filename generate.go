@@ -12,7 +12,6 @@ import (
 // Generate creates the report
 func (r *Reportify) Generate() error {
 	paddingX := 1.0
-	paddingY := 4.0
 	topMargin := r.GetTopMargin()
 
 	pdf := fpdf.New(r.pageOrientation, "mm", "Letter", "")
@@ -61,7 +60,7 @@ func (r *Reportify) Generate() error {
 				maxWidth = w
 			}
 		}
-		maxWidth += 4 // add paddingY
+		maxWidth += 4 // add padding
 
 		// Calculate second column width
 		pageWidth, _ := pdf.GetPageSize()
@@ -70,34 +69,90 @@ func (r *Reportify) Generate() error {
 		secondColWidth := usableWidth - maxWidth
 
 		// Draw table with wrapping second column
-		for _, row := range r.headingTable {
-
-			lines := pdf.SplitLines([]byte(row[1]), secondColWidth)
-			rowHeight := float64(len(lines)) * r.lineHeight
-			rowHeightWithPadding := rowHeight + paddingY
+		for i, row := range r.headingTable {
+			paddingY := 4.0 // Define padding for this row
 
 			xLeft := pdf.GetX()
 			yBefore := pdf.GetY()
 
-			pdf.SetLineWidth(0.3)
-			pdf.SetDrawColor(0, 0, 0)
+			// Get page dimensions for boundary checks
+			_, pageHeight := pdf.GetPageSize()
+			_, top, _, bottom := pdf.GetMargins()
+			pageBottomY := pageHeight - bottom
 
-			// Draw first column box
-			pdf.Rect(xLeft, yBefore, maxWidth, rowHeightWithPadding, "D")
-
-			// Draw first column text with horizontal paddingY
+			// Now actually draw the content
+			// Draw first column text with horizontal paddingX
 			pdf.SetFont(r.GetFont("table_left"))
 			pdf.SetXY(xLeft+paddingX, yBefore+paddingY/2)
 			pdf.MultiCell(maxWidth-paddingX, r.lineHeight, row[0], "", "L", false)
 
-			// Draw second column box
+			// Draw second column text
 			pdf.SetFont(r.GetFont("table_right"))
-			pdf.Rect(xLeft+maxWidth, yBefore, secondColWidth, rowHeightWithPadding, "D")
 			pdf.SetXY(xLeft+maxWidth+paddingX, yBefore+paddingY/2)
+
+			// Store current page before drawing content
+			currentPage := pdf.PageNo()
+
+			// Draw the second column
 			pdf.MultiCell(secondColWidth-paddingX, r.lineHeight, row[1], "", "L", false)
 
-			// Move Y to next row
-			pdf.SetY(yBefore + rowHeightWithPadding)
+			// Check if a page break occurred
+			newPage := pdf.PageNo()
+			newY := pdf.GetY()
+
+			// Set drawing properties
+			pdf.SetLineWidth(0.3)
+			pdf.SetDrawColor(0, 0, 0)
+
+			if newPage > currentPage {
+				// Content caused a page break
+
+				// First portion - draw borders to page bottom
+				firstPageHeight := pageBottomY - yBefore
+				pdf.SetPage(currentPage)
+				pdf.Rect(xLeft, yBefore, maxWidth, firstPageHeight, "D")
+				pdf.Rect(xLeft+maxWidth, yBefore, secondColWidth, firstPageHeight, "D")
+
+				// There may be pages between the first and last page of the table, in which case
+				// we can assume that the entire page is occupied by the table
+				if newPage > currentPage+1 {
+					for p := currentPage + 1; p < newPage; p++ {
+						pdf.SetPage(p)
+						pdf.Rect(xLeft, top, maxWidth, pageHeight-top-bottom, "D")
+						pdf.Rect(xLeft+maxWidth, top, secondColWidth, pageHeight-top-bottom, "D")
+					}
+				}
+				for p := currentPage + 1; p < newPage; p++ {
+					pdf.SetPage(p)
+					pdf.Rect(xLeft, top, maxWidth, pageHeight-top-bottom, "D")
+					pdf.Rect(xLeft+maxWidth, top, secondColWidth, pageHeight-top-bottom, "D")
+				}
+
+				// Last page portion - draw borders from top to current position
+				pdf.SetPage(newPage)
+				secondPageHeight := newY - top + paddingY/2
+				pdf.Rect(xLeft, top, maxWidth, secondPageHeight, "D")
+				pdf.Rect(xLeft+maxWidth, top, secondColWidth, secondPageHeight, "D")
+
+				// Ensure we're on the correct page for the next row
+				pdf.SetPage(newPage)
+				pdf.SetY(newY + paddingY/2)
+			} else {
+				// Content stayed on same page
+				actualHeight := newY - yBefore + paddingY/2
+
+				// Draw borders around the content
+				pdf.Rect(xLeft, yBefore, maxWidth, actualHeight, "D")
+				pdf.Rect(xLeft+maxWidth, yBefore, secondColWidth, actualHeight, "D")
+
+				// Move to position for next row
+				pdf.SetY(newY + paddingY/2)
+			}
+
+			// If this is the last row, ensure we're on the correct page
+			if i == len(r.headingTable)-1 {
+				pdf.SetPage(newPage)
+			}
 		}
 
 		// Add space after the table

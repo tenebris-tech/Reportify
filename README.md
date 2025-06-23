@@ -1,6 +1,6 @@
 # Reportify
 
-This package generates simple reports in .pdf format using *codeberg.org/go-pdf/fpdf*. It began as part of the UnifyEM project and was recently separated into its own package for use in other projects.
+This package generates simple reports in .pdf format using *codeberg.org/go-pdf/fpdf*.
 
 For a demonstration of how to use reportify please refer to example/main.go.
 
